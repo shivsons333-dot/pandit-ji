@@ -3,7 +3,7 @@ import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged, 
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js?v=2";
+import { firebaseConfig } from "./firebase-config.js?v=3";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -30,6 +30,14 @@ function getRecaptcha() {
   if (!recaptcha) recaptcha = new RecaptchaVerifier(auth, "recaptcha", { size: "invisible" });
   return recaptcha;
 }
+// After a failed attempt, throw away the old reCAPTCHA and give it a brand-new box
+function resetRecaptcha() {
+  try { recaptcha?.clear(); } catch {}
+  recaptcha = null;
+  const fresh = document.createElement("div");
+  fresh.id = "recaptcha";
+  $("recaptcha").replaceWith(fresh);
+}
 
 $("sendOtpBtn").addEventListener("click", async () => {
   const num = $("phone").value.trim();
@@ -44,7 +52,7 @@ $("sendOtpBtn").addEventListener("click", async () => {
   } catch (err) {
     console.error(err);
     setMsg($("loginMsg"), "OTP नहीं भेजा जा सका: " + (err.code || err.message), "err");
-    try { recaptcha?.clear(); } catch {} recaptcha = null;
+    resetRecaptcha();
   } finally { $("sendOtpBtn").disabled = false; }
 });
 

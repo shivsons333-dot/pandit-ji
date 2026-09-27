@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pandit Ji – Uttar Panel</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=3">
 <meta name="robots" content="noindex">
 </head>
 <body>
@@ -56,7 +56,7 @@ import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged, 
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, getDoc, onSnapshot, updateDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js";
+import { firebaseConfig } from "./firebase-config.js?v=3";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app); auth.languageCode = "hi";
@@ -75,7 +75,7 @@ $("sendOtpBtn").onclick = async () => {
     recaptcha ??= new RecaptchaVerifier(auth, "recaptcha", { size: "invisible" });
     confirmation = await signInWithPhoneNumber(auth, "+91" + n, recaptcha);
     show($("phoneStep"), false); show($("otpStep")); msg("OTP भेजा गया", "ok");
-  } catch (e) { msg("त्रुटि: " + (e.code || e.message), "err"); try { recaptcha.clear(); } catch {} recaptcha = null; }
+  } catch (e) { msg("त्रुटि: " + (e.code || e.message), "err"); try { recaptcha?.clear(); } catch {} recaptcha = null; const fresh = document.createElement("div"); fresh.id = "recaptcha"; $("recaptcha").replaceWith(fresh); }
 };
 $("verifyOtpBtn").onclick = async () => {
   try { await confirmation.confirm($("otp").value.trim()); msg(""); } catch { msg("गलत OTP", "err"); }
