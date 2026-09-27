@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Puchiye Pandit Ji Se</title>
+<link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+
+<!-- ===== Disclaimer (shown every time the module opens) ===== -->
+<div id="disclaimer" class="overlay">
+  <div class="card">
+    <h2>🙏 अस्वीकरण / Disclaimer</h2>
+    <p>इस मंच पर दिए गए सभी समाधान पंडित जी के <b>व्यक्तिगत अनुभव</b> तथा <b>हिन्दू पंचांग / ज्योतिष शास्त्र</b> पर आधारित हैं।</p>
+    <ul>
+      <li>समाधान को अपनाने से पहले उपयोगकर्ता (जिस व्यक्ति को समाधान चाहिए) स्वयं इसकी जाँच व विचार करें।</li>
+      <li>यह चिकित्सा, कानूनी या आर्थिक सलाह का विकल्प नहीं है। गंभीर समस्या में संबंधित विशेषज्ञ से संपर्क करें।</li>
+      <li>यह सेवा पूर्णतः <b>निःशुल्क</b> है।</li>
+    </ul>
+    <p style="font-size:.9rem;color:#7a6552">The solutions provided are as per experience and as per Hindu Panchang / Jyotish. The user (the person seeking the solution) is required to check them before following. This is not medical, legal or financial advice. This service is free of cost.</p>
+    <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500">
+      <input type="checkbox" id="agree" style="width:auto;margin-top:5px"> मैंने अस्वीकरण पढ़ लिया है और मैं सहमत हूँ / I have read and agree
+    </label>
+    <button id="agreeBtn" disabled>आगे बढ़ें / Continue</button>
+  </div>
+</div>
+
+<header>
+  <h1>🪔 Problem Hai To Solution Hai</h1>
+  <p>पूछिए पंडित जी से — निःशुल्क सेवा</p>
+</header>
+
+<main>
+  <!-- ===== Login with Mobile OTP ===== -->
+  <section id="loginBox" class="card hidden">
+    <h2>मोबाइल OTP से लॉगिन करें</h2>
+    <div id="phoneStep">
+      <label for="phone">मोबाइल नंबर / Mobile number</label>
+      <div style="display:flex;gap:8px">
+        <input value="+91" disabled style="width:70px;text-align:center">
+        <input id="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10 अंकों का नंबर">
+      </div>
+      <button id="sendOtpBtn">OTP भेजें / Send OTP</button>
+    </div>
+    <div id="otpStep" class="hidden">
+      <label for="otp">OTP दर्ज करें / Enter OTP</label>
+      <input id="otp" type="tel" inputmode="numeric" maxlength="6" placeholder="6 अंकों का OTP">
+      <button id="verifyOtpBtn">सत्यापित करें / Verify</button>
+      <button id="changeNumBtn" class="secondary">नंबर बदलें</button>
+    </div>
+    <div id="recaptcha"></div>
+    <div id="loginMsg" class="msg"></div>
+  </section>
+
+  <!-- ===== App (after login) ===== -->
+  <section id="appBox" class="hidden">
+    <div class="topbar">
+      <span>लॉगिन: <b id="userPhone"></b></span>
+      <button id="logoutBtn" class="secondary">लॉगआउट</button>
+    </div>
+
+    <div class="tabs">
+      <button data-tab="ask" class="active">❓ समस्या पूछें</button>
+      <button data-tab="kundli">📜 जन्म पत्रिका</button>
+      <button data-tab="history">🕘 मेरा इतिहास</button>
+    </div>
+
+    <!-- Ask a problem -->
+    <div id="tab-ask" class="card">
+      <h2>अपनी समस्या बताइए</h2>
+      <form id="askForm">
+        <label>समस्या किसके लिए है? (नाम)</label>
+        <input name="personName" required placeholder="जिस व्यक्ति को समाधान चाहिए">
+        <label>समस्या का प्रकार</label>
+        <select name="category" required>
+          <option value="">— चुनें —</option>
+          <option>विवाह / Marriage</option>
+          <option>नौकरी / व्यवसाय – Job / Business</option>
+          <option>स्वास्थ्य / Health</option>
+          <option>धन / Finance</option>
+          <option>परिवार / Family</option>
+          <option>शिक्षा / Education</option>
+          <option>गृह / वास्तु – Home / Vastu</option>
+          <option>अन्य / Other</option>
+        </select>
+        <label>समस्या विस्तार से लिखें</label>
+        <textarea name="problem" required maxlength="3000" placeholder="अपनी समस्या यहाँ लिखें..."></textarea>
+        <p style="font-size:.85rem;color:#7a6552;margin:12px 0 0">जन्म विवरण (वैकल्पिक, बेहतर समाधान के लिए)</p>
+        <div class="row">
+          <div><label>जन्म तिथि</label><input type="date" name="dob"></div>
+          <div><label>जन्म समय</label><input type="time" name="tob"></div>
+        </div>
+        <label>जन्म स्थान</label>
+        <input name="pob" placeholder="शहर, राज्य">
+        <button type="submit">पंडित जी को भेजें</button>
+        <div class="msg" id="askMsg"></div>
+      </form>
+    </div>
+
+    <!-- Janam Patrika -->
+    <div id="tab-kundli" class="card hidden">
+      <h2>जन्म पत्रिका (कुंडली) हेतु अनुरोध</h2>
+      <p style="font-size:.9rem;color:#7a6552;margin-top:0">पंडित जी हिन्दू पंचांग के अनुसार जन्म पत्रिका तैयार करके यहीं आपके इतिहास में भेजेंगे।</p>
+      <form id="kundliForm">
+        <div class="row">
+          <div><label>पूरा नाम</label><input name="personName" required></div>
+          <div><label>लिंग</label>
+            <select name="gender" required><option value="">— चुनें —</option><option>पुरुष / Male</option><option>स्त्री / Female</option><option>अन्य / Other</option></select>
+          </div>
+        </div>
+        <div class="row">
+          <div><label>जन्म तिथि</label><input type="date" name="dob" required></div>
+          <div><label>जन्म समय (जितना सटीक हो)</label><input type="time" name="tob" required></div>
+        </div>
+        <label>जन्म स्थान (शहर, ज़िला, राज्य)</label>
+        <input name="pob" required>
+        <div class="row">
+          <div><label>पिता का नाम (वैकल्पिक)</label><input name="fatherName"></div>
+          <div><label>गोत्र (वैकल्पिक)</label><input name="gotra"></div>
+        </div>
+        <label>विशेष प्रश्न (वैकल्पिक)</label>
+        <textarea name="note" maxlength="2000" placeholder="कोई विशेष बात जो पंडित जी देखें"></textarea>
+        <button type="submit">अनुरोध भेजें</button>
+        <div class="msg" id="kundliMsg"></div>
+      </form>
+    </div>
+
+    <!-- History -->
+    <div id="tab-history" class="card hidden">
+      <h2>मेरा इतिहास (इस मोबाइल नंबर से)</h2>
+      <div id="historyList">लोड हो रहा है...</div>
+    </div>
+  </section>
+</main>
+
+<footer>यह सेवा निःशुल्क है। समाधान अनुभव व हिन्दू पंचांग / ज्योतिष पर आधारित हैं — अपनाने से पहले स्वयं जाँच करें।</footer>
+
+<script type="module" src="app.js?v=2"></script>
+</body>
+</html>
