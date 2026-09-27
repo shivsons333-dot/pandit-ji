@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null && request.auth.token.phone_number != null; }
+    function myPhone()  { return request.auth.token.phone_number; }
+    function isPandit() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(myPhone()));
+    }
+
+    // Pandit ji numbers: add documents here from the Firebase console only (id = "+91XXXXXXXXXX")
+    match /admins/{phone} {
+      allow read: if signedIn() && myPhone() == phone;
+      allow write: if false;
+    }
+
+    match /requests/{id} {
+      // A user can create a request only under their own mobile number
+      allow create: if signedIn()
+        && request.resource.data.phone == myPhone()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.answer == ''
+        && request.resource.data.type in ['problem', 'kundli'];
+
+      // A user sees only their own history; pandit ji sees everything
+      allow read: if signedIn() && (resource.data.phone == myPhone() || isPandit());
+
+      // Only pandit ji can write answers; nobody can delete (history is kept)
+      allow update: if isPandit();
+      allow delete: if false;
+    }
+  }
+}

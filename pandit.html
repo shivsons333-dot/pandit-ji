@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pandit Ji – Uttar Panel</title>
+<link rel="stylesheet" href="style.css">
+<meta name="robots" content="noindex">
+</head>
+<body>
+<header>
+  <h1>🪔 पंडित जी – उत्तर पैनल</h1>
+  <p>केवल अधिकृत पंडित जी के लिए</p>
+</header>
+<main>
+  <section id="loginBox" class="card">
+    <h2>मोबाइल OTP से लॉगिन</h2>
+    <div id="phoneStep">
+      <label for="phone">मोबाइल नंबर</label>
+      <div style="display:flex;gap:8px">
+        <input value="+91" disabled style="width:70px;text-align:center">
+        <input id="phone" type="tel" inputmode="numeric" maxlength="10">
+      </div>
+      <button id="sendOtpBtn">OTP भेजें</button>
+    </div>
+    <div id="otpStep" class="hidden">
+      <label for="otp">OTP</label>
+      <input id="otp" type="tel" inputmode="numeric" maxlength="6">
+      <button id="verifyOtpBtn">सत्यापित करें</button>
+    </div>
+    <div id="recaptcha"></div>
+    <div id="loginMsg" class="msg"></div>
+  </section>
+
+  <section id="panel" class="hidden">
+    <div class="topbar">
+      <span>पंडित जी: <b id="userPhone"></b></span>
+      <button id="logoutBtn" class="secondary">लॉगआउट</button>
+    </div>
+    <div class="tabs">
+      <button data-f="pending" class="active">⏳ प्रतीक्षा में</button>
+      <button data-f="answered">✅ उत्तर दिए गए</button>
+      <button data-f="all">सभी</button>
+    </div>
+    <div class="card" style="padding:12px">
+      <label for="search" style="margin-top:0">मोबाइल नंबर से खोजें</label>
+      <input id="search" placeholder="जैसे 98765">
+    </div>
+    <div id="list">लोड हो रहा है...</div>
+  </section>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, getDoc, onSnapshot, updateDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app); auth.languageCode = "hi";
+const db = getFirestore(app);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const show = (el, on = true) => el.classList.toggle("hidden", !on);
+const msg = (t, type = "") => { $("loginMsg").textContent = t; $("loginMsg").className = "msg " + type; };
+
+let recaptcha, confirmation, all = [], filter = "pending", unsub = null;
+
+$("sendOtpBtn").onclick = async () => {
+  const n = $("phone").value.trim();
+  if (!/^[6-9]\d{9}$/.test(n)) return msg("सही नंबर डालें", "err");
+  try {
+    recaptcha ??= new RecaptchaVerifier(auth, "recaptcha", { size: "invisible" });
+    confirmation = await signInWithPhoneNumber(auth, "+91" + n, recaptcha);
+    show($("phoneStep"), false); show($("otpStep")); msg("OTP भेजा गया", "ok");
+  } catch (e) { msg("त्रुटि: " + (e.code || e.message), "err"); try { recaptcha.clear(); } catch {} recaptcha = null; }
+};
+$("verifyOtpBtn").onclick = async () => {
+  try { await confirmation.confirm($("otp").value.trim()); msg(""); } catch { msg("गलत OTP", "err"); }
+};
+$("logoutBtn").onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, async user => {
+  unsub?.(); unsub = null;
+  if (!user) { show($("panel"), false); show($("loginBox")); show($("otpStep"), false); show($("phoneStep")); return; }
+  // Only numbers listed in the "admins" collection can use this page
+  const adminDoc = await getDoc(doc(db, "admins", user.phoneNumber)).catch(() => null);
+  if (!adminDoc?.exists()) { msg("यह नंबर पंडित जी के रूप में अधिकृत नहीं है।", "err"); await signOut(auth); return; }
+  show($("loginBox"), false); show($("panel"));
+  $("userPhone").textContent = user.phoneNumber;
+  unsub = onSnapshot(collection(db, "requests"), snap => {
+    all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    draw();
+  }, e => { $("list").textContent = "लोड त्रुटि: " + e.code; });
+});
+
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("active", x === b));
+  filter = b.dataset.f; draw();
+});
+$("search").oninput = draw;
+
+const fmt = ts => ts?.toDate ? ts.toDate().toLocaleString("hi-IN", { dateStyle: "medium", timeStyle: "short" }) : "";
+
+function draw() {
+  const s = $("search").value.replace(/\D/g, "");
+  const rows = all.filter(r => (filter === "all" || r.status === filter) && (!s || r.phone.includes(s)));
+  $("list").innerHTML = rows.length ? rows.map(card).join("") : '<div class="card">कोई अनुरोध नहीं।</div>';
+  rows.forEach(r => {
+    const f = document.getElementById("f-" + r.id);
+    f.onsubmit = async e => {
+      e.preventDefault();
+      const answer = f.answer.value.trim(), link = f.link.value.trim();
+      if (!answer) return;
+      if (link && !/^https?:\/\//.test(link)) return alert("लिंक https:// से शुरू होना चाहिए");
+      f.querySelector("button").disabled = true;
+      try {
+        await updateDoc(doc(db, "requests", r.id), {
+          answer, answerLink: link, status: "answered",
+          answeredAt: serverTimestamp(), answeredBy: auth.currentUser.phoneNumber
+        });
+      } catch (err) { alert("सहेजने में त्रुटि: " + err.code); f.querySelector("button").disabled = false; }
+    };
+  });
+}
+
+function card(r) {
+  const d = r.details || {};
+  const lines = Object.entries({
+    "नाम": d.personName, "प्रकार": d.category, "लिंग": d.gender, "जन्म तिथि": d.dob, "जन्म समय": d.tob,
+    "जन्म स्थान": d.pob, "पिता": d.fatherName, "गोत्र": d.gotra, "समस्या": d.problem, "प्रश्न": d.note
+  }).filter(([, v]) => v).map(([k, v]) => `<b>${k}:</b> ${esc(v)}`).join("\n");
+  return `<div class="card">
+    <div class="meta" style="display:flex;gap:10px;flex-wrap:wrap;font-size:.85rem;color:#7a6552">
+      <b>${r.type === "kundli" ? "📜 जन्म पत्रिका" : "❓ समस्या"}</b>
+      <span class="badge ${r.status}">${r.status === "answered" ? "उत्तर दिया" : "प्रतीक्षा"}</span>
+      <span>📱 ${esc(r.phone)}</span><span>${fmt(r.createdAt)}</span>
+    </div>
+    <div class="pre" style="margin-top:8px">${lines}</div>
+    <form id="f-${r.id}">
+      <label>उत्तर / समाधान</label>
+      <textarea name="answer" required>${esc(r.answer)}</textarea>
+      <label>पत्रिका / दस्तावेज़ लिंक (वैकल्पिक – जैसे Google Drive PDF)</label>
+      <input name="link" value="${esc(r.answerLink)}" placeholder="https://...">
+      <button type="submit">${r.status === "answered" ? "उत्तर अपडेट करें" : "उत्तर भेजें"}</button>
+    </form>
+  </div>`;
+}
+</script>
+</body>
+</html>
